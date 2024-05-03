@@ -2,14 +2,15 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import pickle
 
+
 class EventManagementSystemGUI:
     def __init__(self, master):
         self.master = master
-        self.master.title("Event Management System")  # Set the window title
-        
+        self.master.title("Event Management System")
+
         # Create a frame for better organization
         self.main_frame = ttk.Frame(self.master)
-        self.main_frame.grid(row=0, column=0)  # Place the frame in the grid
+        self.main_frame.grid(row=0, column=0)
 
         # Load existing data or create empty data
         self.load_data()
@@ -17,136 +18,113 @@ class EventManagementSystemGUI:
         # Create buttons for each action for each entity
         self.add_buttons()
 
-        # Create a button to display all events
-        self.display_all_events_button = ttk.Button(self.main_frame, text="Display All Events", command=self.display_all_events)
-        self.display_all_events_button.grid(row=len(self.entities) + 1, column=0, columnspan=4, padx=5, pady=5, sticky="ew")
-
     def load_data(self):
-        # Try loading data from binary files, if they exist
-        try:
-            with open("events.pkl", "rb") as f:
-                self.events = pickle.load(f)
-        except FileNotFoundError:
-            self.events = {}
-        
-        try:
-            with open("guests.pkl", "rb") as f:
-                self.guests = pickle.load(f)
-        except FileNotFoundError:
-            self.guests = {}
-        
-        # Add loading for other entities similarly
+        # List of entities to manage
+        self.entities = ["event", "guest", "supplier", "client", "venue", "employee"]
+        self.data = {}
+        for entity in self.entities:
+            try:
+                with open(f"{entity}.pkl", "rb") as f:
+                    self.data[entity] = pickle.load(f)
+            except FileNotFoundError:
+                self.data[entity] = {}  # Ensure each entity type is initialized as an empty dictionary
 
     def save_data(self):
         # Save data to binary files
-        with open("events.pkl", "wb") as f:
-            pickle.dump(self.events, f)
-        
-        with open("guests.pkl", "wb") as f:
-            pickle.dump(self.guests, f)
-        # Add saving for other entities similarly
+        for entity, items in self.data.items():
+            with open(f"{entity}.pkl", "wb") as f:
+                pickle.dump(items, f)
 
     def add_buttons(self):
         # List of entities to manage
-        self.entities = ["Event", "Guest", "Supplier", "Client", "Venue", "Employee"]
-        actions = ["Add", "Delete", "Modify"]  # Actions for each entity
+        self.entities = ["event", "guest", "supplier", "client", "venue", "employee"]
+        actions = ["Add", "Delete", "Modify", "Display", "Display by ID"]
 
-        # Create buttons for each entity and action
         for row, entity in enumerate(self.entities):
             for col, action in enumerate(actions):
-                button = ttk.Button(self.main_frame, text=f"{action} {entity}", command=lambda action=action, entity=entity: self.perform_action(action, entity))
+                button = ttk.Button(self.main_frame, text=f"{action.capitalize()} {entity.capitalize()}",
+                                    command=lambda action=action, entity=entity: self.perform_action(action, entity))
                 button.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
 
     def perform_action(self, action, entity):
-        # Determine the action (Add, Delete, Modify) to perform for a given entity
-        if action == "Add":
-            self.add_entity(entity)
-        elif action == "Delete":
-            self.delete_entity(entity)
-        elif action == "Modify":
-            self.modify_entity(entity)
+        if action in ["Add", "Delete", "Modify"]:
+            self.modify_entity(entity, action)
+        elif action == "Display":
+            self.display_all_entities(entity)
+        elif action == "Display by ID":
+            self.display_entity_by_id(entity)
 
-    def add_entity(self, entity):
-        # Create a new window for adding details to an entity
-        add_window = tk.Toplevel(self.master)
-        add_window.title(f"Add {entity} Details")
-
-        # Define labels and entry fields for the entity details
-        labels = ["Name", "Address", "Contact details", "Budget"] if entity == "Client" else ["Name", "Address", "Contact details", "Menu"]
-        entry_widgets = {}
-        for i, label_text in enumerate(labels):
-            tk.Label(add_window, text=label_text + ":").grid(row=i, column=0)
-            entry = tk.Entry(add_window)
-            entry.grid(row=i, column=1)
-            entry_widgets[label_text.lower()] = entry
-
-        # Button to confirm the addition of new details
-        add_button = ttk.Button(add_window, text="Add", command=lambda: self.add_confirm(add_window, entry_widgets, entity))
-        add_button.grid(row=len(labels), column=0, columnspan=2, pady=10)
-
-    def add_confirm(self, add_window, entry_widgets, entity):
-        # Confirm the addition of new details and update the corresponding data structure
-        details = {label_text: entry.get() for label_text, entry in entry_widgets.items()}
-
-        # Update the corresponding entity's dictionary with new details
-        if entity == "Event":
-            self.events[len(self.events) + 1] = details
-        elif entity == "Guest":
-            self.guests[len(self.guests) + 1] = details
-        # Save the updated data
-        self.save_data()
-        messagebox.showinfo("Add Details", f"Added details: {details}")
-        add_window.destroy()
-
-    def delete_entity(self, entity):
-        # Display a message when the user clicks "Delete"
-        messagebox.showinfo("Delete", f"Deleted {entity}")
-
-    def modify_entity(self, entity):
-        # Create a new window for modifying existing entity details
+    def modify_entity(self, entity, action):
+        # Create a new window for adding or modifying entity details
         modify_window = tk.Toplevel(self.master)
-        modify_window.title(f"Modify {entity} Details")
+        modify_window.title(f"{action.capitalize()} {entity.capitalize()} Details")
 
-        # Retrieve previous values for the entity details
-        previous_values = self.get_previous_values(entity)
+        # Depending on the action, set up the window differently
+        if action != "Delete":
+            self.setup_modify_window(modify_window, entity, action)
+        else:
+            self.setup_delete_window(modify_window, entity)
+
+    def setup_modify_window(self, modify_window, entity, action):
+        # Add labels and entry fields for input, predefined fields depend on the entity type
+        fields = ["ID", "Name", "Address", "Contact Details", "Budget"] if entity in ["client", "supplier"] else ["ID",
+                                                                                                                  "Name",
+                                                                                                                  "Date",
+                                                                                                                  "Venue"]
         entry_widgets = {}
-        for i, (attribute, value) in enumerate(previous_values.items()):
-            tk.Label(modify_window, text=f"{attribute}:").grid(row=i, column=0)
+        for i, field in enumerate(fields):
+            tk.Label(modify_window, text=f"{field}:").grid(row=i, column=0)
             entry = tk.Entry(modify_window)
-            entry.insert(tk.END, value)
             entry.grid(row=i, column=1)
-            entry_widgets[attribute.lower()] = entry
+            entry_widgets[field.lower()] = entry
 
-        # Button to confirm modification of details
-        modify_button = ttk.Button(modify_window, text="Modify", command=lambda: self.modify_confirm(previous_values, modify_window))
-        modify_button.grid(row=len(previous_values), column=0, columnspan=2)
+        # Add button to confirm addition or modification
+        confirm_button = ttk.Button(modify_window, text=action.capitalize(),
+                                    command=lambda: self.confirm_modify(entity, entry_widgets, action, modify_window))
+        confirm_button.grid(row=len(fields), column=0, columnspan=2, pady=10)
 
-    def get_previous_values(self, entity):
-        # Placeholder function to get previous values for the specified entity
-        # Replace this with actual functionality to retrieve previous values
-        return {
-            "Name": "Previous Name",
-            "Address": "Previous Address",
-            "Contact details": "Previous Contact",
-            "Budget": "Previous Budget"
-        }
+    def setup_delete_window(self, modify_window, entity):
+        tk.Label(modify_window, text="ID:").grid(row=0, column=0)
+        id_entry = tk.Entry(modify_window)
+        id_entry.grid(row=0, column=1)
 
-    def modify_confirm(self, previous_values, modify_window):
-        # Confirm modification of details and display a message
-        messagebox.showinfo("Modify Details", "Details modified successfully")
-        modify_window.destroy()
+        delete_button = ttk.Button(modify_window, text="Delete",
+                                   command=lambda: self.confirm_delete(entity, id_entry.get(), modify_window))
+        delete_button.grid(row=1, column=0, columnspan=2, pady=10)
 
-    def display_all_events(self):
-        # Gather all event details and format them for display
-        details_str = ""
-        for key, value in self.events.items():
-            details_str += f"Event {key} Details:\n"
-            for attribute, val in value.items():
-                details_str += f"{attribute}: {val}\n"
-            details_str += "\n"
+    def confirm_modify(self, entity, entry_widgets, action, window):
+        id_value = entry_widgets["id"].get()
+        if not id_value:
+            messagebox.showerror("Error", "ID is required.")
+            window.destroy()
+            return
 
-        # Display the formatted event details in a message box
-        messagebox.showinfo("All Events Details", details_str)
+        details = {field: widget.get() for field, widget in entry_widgets.items() if widget.get()}
+
+        try:
+            if action == "Add":
+                if id_value in self.data[entity]:
+                    messagebox.showerror("Error", "ID already exists.")
+                    window.destroy()
+                    return
+                self.data[entity][id_value] = details  # Add new entry
+
+            elif action == "Modify":
+                if id_value not in self.data[entity]:
+                    messagebox.showerror("Error", "ID does not exist.")
+                    window.destroy()
+                    return
+                self.data[entity][id_value].update(details)  # Update existing entry
+
+            self.save_data()
+            messagebox.showinfo("Success",
+                                f"{entity.capitalize()} details {'added' if action == 'Add' else 'modified'} successfully.")
+            window.destroy()
+
+        except KeyError as e:
+            messagebox.showerror("Error", f"Error modifying data: {str(e)}")
+            window.destroy()
+
 
 def main():
     root = tk.Tk()
