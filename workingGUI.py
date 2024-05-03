@@ -153,5 +153,5 @@ def main():
     app = EventManagementSystemGUI(root)
     root.mainloop()
 
-if __name == "__main__":
+if __name__ == "__main__":
     main()
