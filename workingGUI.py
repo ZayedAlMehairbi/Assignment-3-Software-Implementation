@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pickle
+from tkinter import simpledialog
 
 
 class EventManagementSystemGUI:
@@ -124,6 +125,40 @@ class EventManagementSystemGUI:
         except KeyError as e:
             messagebox.showerror("Error", f"Error modifying data: {str(e)}")
             window.destroy()
+
+    def display_all_entities(self, entity):
+        # Check if there are any entries for the given entity
+        if not self.data[entity]:
+            messagebox.showinfo("Display All", f"No {entity} data available.")
+            return
+
+        # Compile entity details into a readable string
+        details_str = f"All {entity.capitalize()}s:\n\n"
+        for id, details in self.data[entity].items():
+            details_str += f"ID: {id}\n"
+            for key, value in details.items():
+                details_str += f"{key.capitalize()}: {value}\n"
+            details_str += "\n"
+
+        # Display the compiled details
+        messagebox.showinfo(f"All {entity.capitalize()}s", details_str)
+
+    def display_entity_by_id(self, entity):
+        # Create a simple input dialog to get the entity ID from the user
+        id = simpledialog.askstring("Input", f"Enter {entity} ID:", parent=self.master)
+        if id is None or id.strip() == "":
+            return  # User cancelled or entered an empty string
+
+        # Check if the ID exists within the data
+        if id in self.data[entity]:
+            details = self.data[entity][id]
+            details_str = f"Details for {entity.capitalize()} ID {id}:\n\n"
+            for key, value in details.items():
+                details_str += f"{key.capitalize()}: {value}\n"
+
+            messagebox.showinfo(f"{entity.capitalize()} Details", details_str)
+        else:
+            messagebox.showerror("Error", f"{entity.capitalize()} with ID {id} not found.")
 
 
 def main():
